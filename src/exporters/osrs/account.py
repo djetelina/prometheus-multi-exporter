@@ -29,24 +29,29 @@ class OldSchoolRuneScapeAccountExporter(Exporter):
 
     async def update(self):
         for player in self.accounts:
-            data = await self.get_stats(player['rsn'])
+            data = await self.get_stats(player['rsn'], player['mode'])
             next = 'skill'
             for name, value in data.items():
                 if next == 'skill':
-                    skill_rank.labels(name=player['rsn'], mode=player['mode'], skill=name).set(value[0])
-                    level.labels(name=player['rsn'], mode=player['mode'], skill=name).set(value[1])
-                    xp.labels(name=player['rsn'], mode=player['mode'], skill=name).set(value[2])
+                    if int(value[0]) >= 0:
+                        skill_rank.labels(name=player['rsn'], mode=player['mode'], skill=name).set(value[0])
+                    if int(value[1]) >= 0:
+                        level.labels(name=player['rsn'], mode=player['mode'], skill=name).set(value[1])
+                    if int(value[2]) >= 0:
+                        xp.labels(name=player['rsn'], mode=player['mode'], skill=name).set(value[2])
                     if name == 'construction':
                         next = 'activity'
                 else:
-                    activity_rank.labels(name=player['rsn'], mode=player['mode'], activity=name).set(value[0])
-                    score.labels(name=player['rsn'], mode=player['mode'], activity=name).set(value[1])
+                    if int(value[0]) >= 0:
+                        activity_rank.labels(name=player['rsn'], mode=player['mode'], activity=name).set(value[0])
+                    if int(value[1]) >= 0:
+                        score.labels(name=player['rsn'], mode=player['mode'], activity=name).set(value[1])
 
-    async def get_stats(self, player, mode='hiscore_oldschool'):
+    async def get_stats(self, player, mode):
         async with aiohttp.ClientSession() as s:
             async with s.get(f'https://secure.runescape.com/m={mode_translator[mode]}/index_lite.ws?player={player}') as r:
                 data = await r.text()
-        stats = data.split(' ')
+        stats = data.split('\n')
         return dict(
             overall=stats[0].split(','),
             attack=stats[1].split(','),
